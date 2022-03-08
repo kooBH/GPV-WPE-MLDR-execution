@@ -1,0 +1,6 @@
+[submodule "lib/WAV"]
+	path = lib/WAV
+	url = https://github.com/koobh/WAV
+[submodule "lib/STFT"]
+	path = lib/STFT
+	url = https://github.com/koobh/STFT
