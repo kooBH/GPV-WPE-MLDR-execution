@@ -4,3 +4,12 @@
 [submodule "lib/STFT"]
 	path = lib/STFT
 	url = https://github.com/koobh/STFT
+[submodule "lib/WPE"]
+	path = lib/WPE
+	url = https://github.com/koobh/WPE
+[submodule "lib/MLDR"]
+	path = lib/MLDR
+	url = https://github.com/koobh/MLDR
+[submodule "lib/jsonConfig"]
+	path = lib/jsonConfig
+	url = https://github.com/koobh/jsonConfig

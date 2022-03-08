@@ -1,29 +1,18 @@
-# preprocessing_testbed
-Testbed for audio signal preprocessing
+# GPV-WPE-MLDR-execution    
+  
+AV-TR 시물레이션 테스트를 위한 전처리 프로그램.    
+   
++ 기능    
+GPV - WPE - MLDR(optional)     
+     
++ 입력    
+```input``` 폴더에 있는 다채널  ```<wav-id>.wav```     
+     
++ 출력      
+```output```폴더에 발화별로 crop 된 상태로 단채널  ```<wav-id>_<crop-id>.wav```로 추출         
+  
++ 설정  
+GPV : 임계값   
+MLDR : on/off     
 
-# Submodules
-
-```
-git clone --recursive
-```
-or  
-```
-git submodule init
-git submodule update
-```
-
-+ [WAV](https://github.com/kooBH/WAV)  
-c++ WAV class for my processing modules  
-+ [STFT](https://github.com/kooBH/STFT)  
-STFT(Short Time Fourier Transform), ISTFT(Inverse - Short Time Fourier Transform)  for wav,mic input and signal processing modules
-
-# Requirements
-C++17 or higher (std::filesystem)  
-
-# Usage
-1. mkdir ```build```, ```input```, ```output``` at root directory of the project
-2. goto ```build``` directory run ```cmake ..``` or use cmake GUI 
-2. add your algorithm code file
-3. add routines for your algorithm into ```CMakeLists.txt```,```src/main.cpp```  (as instructed in the code)
-4. the main code read every file in the ```input``` directory as WAV format
-5. processed outputs will be saved into the ```output``` directory
+    
