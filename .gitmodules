@@ -13,3 +13,6 @@
 [submodule "lib/jsonConfig"]
 	path = lib/jsonConfig
 	url = https://github.com/koobh/jsonConfig
+[submodule "lib/VADK"]
+	path = lib/VADK
+	url = https://github.com/kooBH/VADK.git
