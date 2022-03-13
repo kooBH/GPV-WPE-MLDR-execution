@@ -22,4 +22,8 @@ Release
 Debug
 x64
 *.user
-*.exe
+*.exe  
+
+# external dependency  
+
+lib/libtorch    

@@ -1,12 +1,25 @@
 # CMAKE version of Ubuntu 16.04 LTS is 3.5.
 cmake_minimum_required(VERSION 3.5)
-project(test)
+project(GPV_WPE_MLDR)
 
 set(LINKLIBS)
 set(COMPILE_OPTION)
 set(SRC)
 set(INCL)
-  
+ 
+
+set(CMAKE_PREFIX_PATH lib/libtorch) 
+
+### LibTorchPath ###
+#include(lib/libtorch/share/cmake/Torch/TorchConfig.cmake)
+find_package(Torch REQUIRED)
+
+include(lib/WAV/WAV.cmake)
+include(lib/STFT/cpp/STFT_cpp.cmake)
+include(lib/STFT/mel/mel.cmake)
+include(lib/MLDR/MLDR.cmake)
+include(lib/WPE/WPE.cmake)
+
 if(NOT MSVC)
 	list(APPEND LINKLIBS
 	# <math.h>
@@ -21,7 +34,7 @@ else()
 endif()
 
 list(APPEND SRC
-	test.cpp
+	main.cpp
 	# TODO : Add path to algorithm source here.
 )
 	
@@ -57,7 +70,7 @@ endif()
 
 add_executable(${PROJECT_NAME} ${SRC})
 target_include_directories(${PROJECT_NAME}	PRIVATE	${INCL}  )
-target_link_libraries(${PROJECT_NAME} ${LINKLIBS})
+target_link_libraries(${PROJECT_NAME} ${TORCH_LIBRARIES} ${LINKLIBS})
 target_compile_options(${PROJECT_NAME} PRIVATE ${COMPILE_OPTION} )
 set_target_properties(${PROJECT_NAME} PROPERTIES  CXX_STANDARD 17 )
 
