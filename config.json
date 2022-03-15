@@ -1,0 +1,13 @@
+{
+	"GPV":{
+		"threshold":0.7
+	},
+	"WPE":{
+		"post_gamma":0.97,
+		"tap_delay":3,
+		"tap_num":7
+	},
+	"MLDR":{
+		"on":false
+	}
+}

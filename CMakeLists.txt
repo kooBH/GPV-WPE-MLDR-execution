@@ -19,6 +19,8 @@ include(lib/STFT/cpp/STFT_cpp.cmake)
 include(lib/STFT/mel/mel.cmake)
 include(lib/MLDR/MLDR.cmake)
 include(lib/WPE/WPE.cmake)
+include(lib/jsonConfig/jsonConfig.cmake)
+include(lib/VADK/libtorch/GPV.cmake)
 
 if(NOT MSVC)
 	list(APPEND LINKLIBS
@@ -34,7 +36,7 @@ else()
 endif()
 
 list(APPEND SRC
-	main.cpp
+	src/main.cpp
 	# TODO : Add path to algorithm source here.
 )
 	

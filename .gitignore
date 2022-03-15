@@ -27,3 +27,9 @@ x64
 # external dependency  
 
 lib/libtorch    
+
+# data
+*.wav
+
+# build
+build
