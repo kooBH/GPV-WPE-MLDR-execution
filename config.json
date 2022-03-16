@@ -1,8 +1,14 @@
 {
 	"GPV":{
-		"threshold":0.7
+		"threshold":0.9
 	},
+	"VAD_post":{
+		"len_bridge":125,
+		"min_frame":60
+	}
+	,
 	"WPE":{
+		"on":false,
 		"post_gamma":0.97,
 		"tap_delay":3,
 		"tap_num":7

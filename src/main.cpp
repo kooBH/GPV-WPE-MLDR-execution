@@ -23,20 +23,32 @@ int main() {
 
   /* Define Algorithm Class here */
   int length;
-  int n_unit = -1;
+  int n_frame = -1;
 
   /* Config */
   const std::string path_config = "../config.json";
   jsonConfig config_GPV(path_config,"GPV");
   jsonConfig config_WPE(path_config,"WPE");
   jsonConfig config_MLDR(path_config,"MLDR");
+  jsonConfig config_VAD_post(path_config,"VAD_post");
 
+  config_GPV.Print();
+  config_VAD_post.Print();
+  config_WPE.Print();
+  config_MLDR.Print();
+
+  // VAD
   double gpv_threshold= config_GPV["threshold"];
+  int len_bridge = static_cast<int>(config_VAD_post["len_bridge"]);
+  int min_frame = static_cast<int>(config_VAD_post["min_frame"]);
+
+  // WPE
+  bool wpe_on = static_cast<bool>(config_WPE["on"]);
   double wpe_post_gamma = config_WPE["post_gamma"];
-  
   int wpe_tap_delay = static_cast<int>(config_WPE["tap_delay"]);
   int wpe_tap_num = static_cast<int>(config_WPE["tap_num"]);
 
+  // MLDR
   bool mldr_on = static_cast<bool>(config_MLDR["on"]);
 
 
@@ -44,7 +56,7 @@ int main() {
   mel mel_filter(samplerate, frame, n_mels);
   GPV vad("GPV.pt", n_mels);
 
-  WAV* output;
+  WAV* output_seg;
   STFT* stft;
   WPE* wpe;
   MLDR* mldr;
@@ -67,10 +79,16 @@ int main() {
   memset(mel, 0, sizeof(double) * (n_mels));
 
   double** vad_data;
-  double* prob;
+  double* vad_prob;
+  bool* vad_label;
 
   double** data;
   short* buf_out = new short[shift];
+  short* buf_zero = new short[shift];
+  memset(buf_zero, 0, sizeof(short) * shift);
+
+
+  double frame2msec = 1 / (double)samplerate * shift;
 
   for (auto path : std::filesystem::directory_iterator{ "../input" }) {
     int cnt_frame;
@@ -79,6 +97,7 @@ int main() {
     printf("processing : %s\n", target.c_str());
     WAV input;
     input.OpenFile(target.c_str());
+
 
     // Get param
     int ch = input.GetChannels();
@@ -90,21 +109,23 @@ int main() {
       exit(16);
     }
 
-    int n_unit = int(n_sample / shift + (n_sample % shift ? 1 : 0));
-    printf("n_unit : %d\n", n_unit);
+    int n_frame = int(n_sample / shift + (n_sample % shift ? 1 : 0));
+    printf("n_frame : %d\n", n_frame);
 
     // buffer alloc
     short* buf_tmp = new short[ch * shift];
     printf("channels : %d\n", ch);
 
-    vad_data = new double* [n_unit];
-    for (int i = 0; i < n_unit; i++) {
+    vad_data = new double* [n_frame];
+    for (int i = 0; i < n_frame; i++) {
       vad_data[i] = new double[n_mels];
       memset(vad_data[i], 0, sizeof(double) * n_mels);
     }
 
-    prob = new double[n_unit];
-    memset(prob, 0, sizeof(double) * (n_unit));
+    vad_prob = new double[n_frame];
+    memset(vad_prob, 0, sizeof(double) * (n_frame));
+
+    vad_label = new bool[n_frame];
 
     int cnt_crop = 0;
     cnt_frame = 0;
@@ -133,28 +154,85 @@ int main() {
     }
     printf("INFO::feature extraction done. cnt_frame : %d\n", cnt_frame);
 
-    vad.process(vad_data, prob, n_unit);
+    vad.process(vad_data, vad_prob, n_frame);
+
+
     /* Post Processing for vad output */
+    // init label
+    memset(vad_label, 0, sizeof(bool) * n_frame);
 
-    /* Process output */
+    // connect sparse utterances
+    int vad_cnt_down = len_bridge;
+    for (int i = 0; i < n_frame; i++) {
+      // speech
+      if (vad_prob[i] >= gpv_threshold) {
+        vad_label[i] = true;
+
+        // connect
+        if (vad_cnt_down < len_bridge) {
+          printf("connect : %d ~ %d\n",i - len_bridge + vad_cnt_down, i);
+          for (int j = 0; j < len_bridge - vad_cnt_down +1; j++)
+            vad_label[i - j] = true;
+        }
+        vad_cnt_down = len_bridge;
+
+      }
+      // non-speech
+      else {
+        vad_cnt_down--;
+        if (vad_cnt_down < 0)
+          vad_cnt_down = 0;
+      }
+    }
+
+    // elim too short utterances
+    bool prev_label = false;
+    int idx_start;
+    for (int i = 0; i < n_frame; i++) {
+      prev_label = i>0?vad_label[i - 1]:false;
+      // rising
+      if (!prev_label && vad_label[i]) {
+        idx_start = i;
+        printf("VAD::start idx : %d\n",idx_start);
+      }
+      // falling
+      else if (prev_label && !vad_label[i]) {
+        printf("VAD::end idx : %d | %d %d\n",i,idx_start,min_frame);
+        // too short
+        if (i-idx_start < min_frame) {
+          for (int j = i; j > idx_start-1; j--) {
+            vad_label[j] = false;
+          }
+        }
+
+      }
+    }
+
+    //unsegmented output
+    WAV output_unseg(1, samplerate);
+    std::string path_unseg = "../output_unseg/" + target.substr(9, target.length() -9);
+    //std::cout << "WAV_unseg : " << path_unseg << std::endl;
+    output_unseg.NewFile(path_unseg);
+
+    /* Process output_seg */
     input.Rewind();
-
 
     cnt_frame = 0;
     while (!input.IsEOF()) {
       length = input.ReadUnit(buf_tmp, shift * ch);
-     // printf("prob[%d] : %lf\n", cnt_frame, prob[cnt_frame]);
+     // printf("vad_prob[%d] : %lf\n", cnt_frame, vad_prob[cnt_frame]);
 
       // non speech
-      if (prob[cnt_frame++] < gpv_threshold) {
+      if (!vad_label[cnt_frame++]) {
         // speech end
         if (is_it_processed) {
           is_it_processed = false;
           is_first_frame = true;
           cnt_crop++;
-
-          output->Finish();
-          delete output;
+          
+          output_seg->Normalize();
+          output_seg->Finish();
+          delete output_seg;
           delete stft;
           delete wpe;
           delete mldr;
@@ -163,6 +241,7 @@ int main() {
             delete[] data[i];
           delete[] data;
         }
+        output_unseg.Append(buf_zero, shift);
         continue;
       }
 
@@ -171,13 +250,13 @@ int main() {
         is_first_frame = false;
         is_it_processed = true;
 
-        output = new WAV(1, rate);
-        //output path
-        std::string path_o = "../output/" + target.substr(9, target.length() - 9);
+        output_seg = new WAV(1, rate);
+        //output_seg path
+        std::string path_o = "../output_seg/" + target.substr(9, target.length() -9);
         path_o = path_o.substr(0, path_o.length() - 4);
-        path_o = path_o + "_" +std::to_string(cnt_crop) + ".wav";
-        std::cout << "prob : "<<prob[cnt_frame]<<" | "<< path_o << std::endl;
-        output->NewFile(path_o);
+        path_o = path_o + "_" +std::to_string(int(frame2msec*10*cnt_frame)) + ".wav";
+        std::cout << "vad_prob : "<<vad_prob[cnt_frame]<<" | "<< path_o << std::endl;
+        output_seg->NewFile(path_o);
 
         stft = new STFT(ch, frame, shift);
         wpe = new WPE(samplerate, frame, shift, ch,
@@ -194,28 +273,34 @@ int main() {
         }
 
       }
+
+      //processing speech
       stft->stft(buf_tmp, length, data);
-      wpe->Process(data);
-      if (mldr_on)
-        mldr->Process(data);
+
+      if(wpe_on)wpe->Process(data);
+      if(mldr_on)mldr->Process(data);
 
       stft->istft(data[0], buf_out);
 
-      output->Append(buf_out, shift);
+      output_seg->Append(buf_out, shift);
+      output_unseg.Append(buf_out, shift);
     }
     input.Finish();
+    output_unseg.Normalize();
+    output_unseg.Finish();
 
-    for (int i = 0; i < n_unit; i++)
+    for (int i = 0; i < n_frame; i++)
       delete[] vad_data[i];
     delete[] vad_data;
-    delete[] prob;
+    delete[] vad_prob;
     delete[] buf_tmp;
 
   }
   printf("Done\n");
 
   delete[] buf_in;
-  delete buf_out;
+  delete[] buf_out;
+  delete[] buf_zero;
   delete[] spec;
   delete[] mag;
   delete[] mel;
