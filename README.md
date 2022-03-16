@@ -1,17 +1,21 @@
 # GPV-WPE-MLDR-execution    
   
-AV-TR 시물레이션 테스트를 위한 전처리 프로그램.    
+AVCU 시뮬레이션 테스트를 위한 전처리 프로그램.    
    
 ## 기능    
 GPV - WPE(optional) - MLDR(optional)     
      
 ## 입력    
-```input``` 폴더에 있는 다채널  ```<wav-id>.wav```     
+```input``` 폴더에 있는 임의의 채널의  ```<wav-id>.wav```     
      
 ## 출력      
 ```output_seg```폴더에 발화별로 crop 된 상태로 단채널  ```<wav-id>_<0.1초 단위의 시작시간>.wav```로 추출  
 ```output_unseg```에 speech구간만 담아서 ```<wav-id>.wav```로 추출
   
+## VAD 모델    
+https://drive.google.com/file/d/1Kusu-K2Y1f5RRukmneyLlgMMyqavwCft/view?usp=sharing  
+```GPV.pt```를 실행파일과 같은 위치에 둔다.    
+
 ## 설정 ```config.json``` 
 
 ### NOTE  

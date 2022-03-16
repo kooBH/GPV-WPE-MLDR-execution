@@ -170,7 +170,7 @@ int main() {
 
         // connect
         if (vad_cnt_down < len_bridge) {
-          printf("connect : %d ~ %d\n",i - len_bridge + vad_cnt_down, i);
+         // printf("connect : %d ~ %d\n",i - len_bridge + vad_cnt_down, i);
           for (int j = 0; j < len_bridge - vad_cnt_down +1; j++)
             vad_label[i - j] = true;
         }
@@ -193,11 +193,11 @@ int main() {
       // rising
       if (!prev_label && vad_label[i]) {
         idx_start = i;
-        printf("VAD::start idx : %d\n",idx_start);
+       // printf("VAD::start idx : %d\n",idx_start);
       }
       // falling
       else if (prev_label && !vad_label[i]) {
-        printf("VAD::end idx : %d | %d %d\n",i,idx_start,min_frame);
+        //printf("VAD::end idx : %d | %d %d\n",i,idx_start,min_frame);
         // too short
         if (i-idx_start < min_frame) {
           for (int j = i; j > idx_start-1; j--) {
@@ -255,7 +255,7 @@ int main() {
         std::string path_o = "../output_seg/" + target.substr(9, target.length() -9);
         path_o = path_o.substr(0, path_o.length() - 4);
         path_o = path_o + "_" +std::to_string(int(frame2msec*10*cnt_frame)) + ".wav";
-        std::cout << "vad_prob : "<<vad_prob[cnt_frame]<<" | "<< path_o << std::endl;
+        //std::cout << "vad_prob : "<<vad_prob[cnt_frame]<<" | "<< path_o << std::endl;
         output_seg->NewFile(path_o);
 
         stft = new STFT(ch, frame, shift);
