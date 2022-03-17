@@ -41,6 +41,8 @@ int main() {
   double gpv_threshold= config_GPV["threshold"];
   int len_bridge = static_cast<int>(config_VAD_post["len_bridge"]);
   int min_frame = static_cast<int>(config_VAD_post["min_frame"]);
+  int pad_pre = static_cast<int>(config_VAD_post["pad_pre"]);
+  int pad_post = static_cast<int>(config_VAD_post["pad_post"]);
 
   // WPE
   bool wpe_on = static_cast<bool>(config_WPE["on"]);
@@ -90,6 +92,7 @@ int main() {
 
   double frame2msec = 1 / (double)samplerate * shift;
 
+  //TODO search .wav file only
   for (auto path : std::filesystem::directory_iterator{ "../input" }) {
     int cnt_frame;
 
@@ -207,6 +210,25 @@ int main() {
 
       }
     }
+
+    /* fixed size padding */
+    prev_label = false;
+    for (int i = 0; i < n_frame; i++) {
+      prev_label = i > 0 ? vad_label[i - 1] : false;
+      // rising
+      if (!prev_label && vad_label[i]) {
+        for (int j = 0; j < pad_pre && i - j > 0; j++)
+          vad_label[i - j] = true;
+      }
+      // falling
+      else if (prev_label && !vad_label[i]) {
+        for (int j = 0; j < pad_post && i + j < n_frame; j++)
+          vad_label[i + j] = true;
+      }
+        
+    }
+    
+
 
     //unsegmented output
     WAV output_unseg(1, samplerate);

@@ -3,6 +3,8 @@
 		"threshold":0.9
 	},
 	"VAD_post":{
+		"pad_pre":12,
+		"pad_post":12,
 		"len_bridge":125,
 		"min_frame":60
 	}
