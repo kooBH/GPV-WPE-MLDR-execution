@@ -92,6 +92,7 @@ int main() {
 
   double frame2msec = 1 / (double)samplerate * shift;
 
+  //TODO search .wav file only
   for (auto path : std::filesystem::directory_iterator{ "../input" }) {
     int cnt_frame;
 
@@ -224,6 +225,7 @@ int main() {
         for (int j = 0; j < pad_post && i + j < n_frame; j++)
           vad_label[i + j] = true;
       }
+
     }
 
     //unsegmented output
