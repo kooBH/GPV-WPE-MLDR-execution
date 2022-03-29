@@ -161,71 +161,73 @@ int main() {
 
 
     /* Post Processing for vad output */
-    // init label
-    memset(vad_label, 0, sizeof(bool) * n_frame);
+    {
+      // init label
+      memset(vad_label, 0, sizeof(bool) * n_frame);
 
-    // connect sparse utterances
-    int vad_cnt_down = len_bridge;
-    for (int i = 0; i < n_frame; i++) {
-      // speech
-      if (vad_prob[i] >= gpv_threshold) {
-        vad_label[i] = true;
+      // connect sparse utterances
+      int vad_cnt_down = len_bridge;
+      for (int i = 0; i < n_frame; i++) {
+        // speech
+        if (vad_prob[i] >= gpv_threshold) {
+          vad_label[i] = true;
 
-        // connect
-        if (vad_cnt_down < len_bridge) {
-         // printf("connect : %d ~ %d\n",i - len_bridge + vad_cnt_down, i);
-          for (int j = 0; j < len_bridge - vad_cnt_down +1; j++)
+          // connect
+          if (vad_cnt_down < len_bridge) {
+            // printf("connect : %d ~ %d\n",i - len_bridge + vad_cnt_down, i);
+            for (int j = 0; j < len_bridge - vad_cnt_down + 1; j++)
+              vad_label[i - j] = true;
+          }
+          vad_cnt_down = len_bridge;
+
+        }
+        // non-speech
+        else {
+          vad_cnt_down--;
+          if (vad_cnt_down < 0)
+            vad_cnt_down = 0;
+        }
+      }
+
+      // elim too short utterances
+      bool prev_label = false;
+      int idx_start;
+      for (int i = 0; i < n_frame; i++) {
+        prev_label = i > 0 ? vad_label[i - 1] : false;
+        // rising
+        if (!prev_label && vad_label[i]) {
+          idx_start = i;
+          // printf("VAD::start idx : %d\n",idx_start);
+        }
+        // falling
+        else if (prev_label && !vad_label[i]) {
+          //printf("VAD::end idx : %d | %d %d\n",i,idx_start,min_frame);
+          // too short
+          if (i - idx_start < min_frame) {
+            for (int j = i; j > idx_start - 1; j--) {
+              vad_label[j] = false;
+            }
+          }
+
+        }
+      }
+
+      /* fixed size padding */
+      prev_label = false;
+      for (int i = 0; i < n_frame; i++) {
+        prev_label = i > 0 ? vad_label[i - 1] : false;
+        // rising
+        if (!prev_label && vad_label[i]) {
+          for (int j = 0; j < pad_pre && i - j > 0; j++)
             vad_label[i - j] = true;
         }
-        vad_cnt_down = len_bridge;
-
-      }
-      // non-speech
-      else {
-        vad_cnt_down--;
-        if (vad_cnt_down < 0)
-          vad_cnt_down = 0;
-      }
-    }
-
-    // elim too short utterances
-    bool prev_label = false;
-    int idx_start;
-    for (int i = 0; i < n_frame; i++) {
-      prev_label = i>0?vad_label[i - 1]:false;
-      // rising
-      if (!prev_label && vad_label[i]) {
-        idx_start = i;
-       // printf("VAD::start idx : %d\n",idx_start);
-      }
-      // falling
-      else if (prev_label && !vad_label[i]) {
-        //printf("VAD::end idx : %d | %d %d\n",i,idx_start,min_frame);
-        // too short
-        if (i-idx_start < min_frame) {
-          for (int j = i; j > idx_start-1; j--) {
-            vad_label[j] = false;
-          }
+        // falling
+        else if (prev_label && !vad_label[i]) {
+          for (int j = 0; j < pad_post && i + j < n_frame; j++)
+            vad_label[i + j] = true;
         }
 
       }
-    }
-
-    /* fixed size padding */
-    prev_label = false;
-    for (int i = 0; i < n_frame; i++) {
-      prev_label = i > 0 ? vad_label[i - 1] : false;
-      // rising
-      if (!prev_label && vad_label[i]) {
-        for (int j = 0; j < pad_pre && i - j > 0; j++)
-          vad_label[i - j] = true;
-      }
-      // falling
-      else if (prev_label && !vad_label[i]) {
-        for (int j = 0; j < pad_post && i + j < n_frame; j++)
-          vad_label[i + j] = true;
-      }
-
     }
 
     //unsegmented output
@@ -251,7 +253,8 @@ int main() {
           is_it_processed = false;
           is_first_frame = true;
           cnt_crop++;
-          
+         
+          printf("seg\n");
           output_seg->Normalize();
           output_seg->Finish();
           delete output_seg;
@@ -307,6 +310,27 @@ int main() {
       output_seg->Append(buf_out, shift);
       output_unseg.Append(buf_out, shift);
     }
+
+    // For the case input ended with speech
+    if (is_it_processed) {
+      is_it_processed = false;
+      is_first_frame = true;
+      cnt_crop++;
+
+      printf("seg\n");
+      output_seg->Normalize();
+      output_seg->Finish();
+      delete output_seg;
+      delete stft;
+      delete wpe;
+      delete mldr;
+
+      for (int i = 0; i < ch; i++)
+        delete[] data[i];
+      delete[] data;
+    }
+
+
     input.Finish();
     output_unseg.Normalize();
     output_unseg.Finish();
